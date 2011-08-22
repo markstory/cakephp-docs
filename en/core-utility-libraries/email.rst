@@ -3,23 +3,24 @@ CakeEmail
 
 .. php:class:: CakeEmail
 
-``CakeEmail`` is a new class from the cake library to send emails. With this
-class you can send email from any place of your application, ie. Controllers,
-Models, Console.
+``CakeEmail`` is a new class to send email. With this
+class you can send email from any place of your application. In addition to
+using the EmailComponent from your controller, you can also send mail from
+Shells, and Models.
 
 This class replaces the :php:class:`EmailComponent` and gives more flexibility
 in sending emails. For example, you can create your own transports to send
-email instead of using the hard-coded smtp and mail.
+email instead of using the provided smtp and mail.
 
 Basic usage
 ===========
 
-First of all, you should call the :php:meth:`App::uses()` to import the class::
+First of all, you should ensure the class is loaded using :php:meth:`App::uses()`::
 
     <?php
     App::uses('CakeEmail', 'Network/Email');
 
-Using CakeEmail is similar to :php:class:`EmailComponent`. But instead of
+Using CakeEmail is similar to using :php:class:`EmailComponent`. But instead of
 using attributes you must use methods. Example::
 
     <?php
@@ -34,22 +35,35 @@ above code as::
 
     <?php
     $email = new CakeEmail();
-    $email->from('me@example.com')->to('you@example.com')->subject('About')->send('My message');
+    $email->from('me@example.com')
+        ->to('you@example.com')
+        ->subject('About')
+        ->send('My message');
 
 Choosing the sender
 -------------------
 
-Now you can configure the sender header easily using the 
-:php:meth:`~CakeEmail::sender()` method.
+When sending email on behalf of other people its often a good idea to define the
+original sender using the Sender header.  You can do so using ``sender()``::
+
+    <?php
+    $email = new CakeEmail();
+    $email->sender('app@example.com', 'MyApp emailer');
+
+.. note::
+
+    Its also a good idea to set the envelope sender when sending mail on another
+    person's behalf.  This prevents them from getting any messages about
+    deliverability.
 
 Configuration
 -------------
 
-Similar of database configuration, email also have a class to put the
-configurations!
+Similar of database configuration, emails also have a class to centralize all the
+configuration.
 
 You should create the file ``app/Config/email.php`` with the class
-``EmailConfig``. The ``app/Config/email.php.default`` have an example of this
+``EmailConfig``. The ``app/Config/email.php.default`` has an example of this
 file.
 
 The ``CakeEmail`` create an instance of this file before use the config. If you
