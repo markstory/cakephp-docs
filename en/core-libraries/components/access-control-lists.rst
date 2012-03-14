@@ -48,6 +48,17 @@ own.  The built-in implementations are:
   This allows the permissions to be changed at runtime without modifying source
   code.  However, it can be less performant and more complex than other
   implementations.
+* ``IniAcl`` stores **ARO** and **ACO** data into a flat ini file.  This backend
+  does not support many of the features that DbAcl and PhpAcl support.
+
+You can also create your own ACL backends.  See
+:ref:`creating-custom-acl-backends` for more information.  To use a specific
+backend you will need to set ``Configure::write('Acl.classname', 'ChosenAdapter')``
+in ``app/Config/core.php``.  For example to use DbAcl you could do the
+following::
+
+    <?php
+    Configure::write('Acl.classname', 'DbAcl');
 
 Permissions and cascading permissions
 =====================================
@@ -137,26 +148,97 @@ then check how permissions are resolved:
 With a few permissions in place, we can start checking permissions.  In the
 example above, we've used alias paths for both ARO's and ACO's. However, nodes
 can be identified either by alias paths, or model.id pairs.  You should only use
-one type of identifier in each tree. Generally, controller ACO's are stored
-using aliases, while nodes created with the :php:class:`AclBehavior` are created
-as model.id pairs.  For our example, permissions are resolved between two paths.
-Once an explicit deny/allow rule is encountered path traversal is stopped.
+one type of identifier in each tree. Generally, when using ``DbAcl`` controller 
+ACO's are stored using aliases, while nodes created with the
+:php:class:`AclBehavior` are created as model.id pairs.  For our example,
+permissions are resolved between two alias paths.  Once an explicit deny/allow rule is
+encontered path traversal is stopped.
 
 When checking if ``users/Students/Joe`` can access ``controllers/Courses/add``
 the following happens:
 
-* The tree for each path is generated, and the terminal nodes are fetched.
-* A permission lookup is done for the ``Joe`` and ``add`` nodes.
-* Since the previous lookup failed, permissions lookups are done for each parent
-  node in the tree.
+* The tree for each path is generated, and each nodes is fetched.
+* A permission lookup is done for the ``Joe`` and the list of ACO nodes.
+* Since this lookup failed, permissions lookups are done for each parent
+  ACO node.
 * Since the only permission set is the deny rule for ``users`` and
   ``controllers`` the acl check fails.
 
-TODO: Add a few more examples.
+Another example of how permissions are resolved would be looking checking if
+``users/Students/Joe`` can access ``controllers/Students/edit``.  The process
+would look something like:
+
+* The tree for each path is generated, and each node in the path is fetched.
+* A permission lookup is done for ``Joe`` and the list of ACO's.  This check is
+  undefined, as there is no explict permission set for Joe.
+* Next a lookup between ``Students`` and the list of ACO's. 
+* Since ``Students`` are granted access to ``controller/Students/edit`` the
+  permission lookup succeeds and the ACL check returns true.
+
+.. _creating-custom-acl-backends:
+
+Creating custom ACL backends
+============================
+
+Since the AclComponent uses an adapter strategy for Acl backends, you can create
+application specific ACL implementations that allow you to define application
+specific ACL rules, or implement additional checks like user suspensions, or
+other permission related features.
+
+Acl implementations should be put into
+``app/Controller/Component/Acl/MyAcl.php`` for example.  Acl implementations
+need to implement all the methods defined on the :php:class:`AclInterface`. For
+our example, we'll add in a way to temporarily suspend certain users, who have
+not paid for our application's services.  We'll extend ``PhpAcl``, as our
+theoretical application has mostly static permissions with the exception of
+temporary user suspensions.  We'll assume that our ``User`` class has a few
+methods to check whether or not a user has been suspended::
+
+    <?php
+    App::uses('PhpAcl', 'Controller/Component/Acl');
+    class MyAcl extends PhpAcl {
+        public function check($aro, $aco, $action = '*') {
+            $aroPath = $this->Aro->resolve($aro);
+            $user = ClassRegistry::init('User');
+            if ($user->isSuspended($aroPath)) {
+                return false;
+            }
+            return parent::check($aro, $aco, $action);
+        }
+    }
+
+Once we've got our very basic Acl extension in place, we can use it by changing
+the configuration value in ``app/Config/core.php``::
+
+    <?php
+    Configure::write('Acl.classname', 'MyAcl');
 
 
-- Where permissions fit into this.
-- Permission cascades.
+Using DbAcl
+===========
+
+Using grant and deny
+--------------------
+
+Combining with the AclBehavior
+------------------------------
+
+Using the AclShell
+------------------
+
+
+Using PhpAcl
+============
+
+
+Using grant and deny
+--------------------
+
+
+Integrating with AuthComponent
+==============================
+
+
 - The built-in CakePHP acl backends
   - configuring acl component
 - Building your own acl backend & AclInterface
