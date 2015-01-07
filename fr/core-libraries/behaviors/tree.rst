@@ -698,7 +698,7 @@ Intégrité des données
 
         $this->Category->verify();
 
-Exemple de sortie::
+    Exemple de sortie::
 
         Array
         (
